@@ -93,13 +93,14 @@ int main(int argc, char* argv[])
 #endif // !CSS_DBG_PARSE
     for (const auto& sel : sheet.properties)
     {
-      numRulesets += sel.second.map.size();
+      numRulesets += sel.second.size();
 #if !CSS_DBG_PARSE
       std::cout << "Selector <" << sel.first << ">\n";
-      for (const auto& prop : sel.second.map)
-      {
-        std::cout << "    " << prop.first << ": " << prop.second << ";\n";
-      }
+      sel.second.visit(
+        [](const css::parser::property& p) {
+          std::cout << "    " << p << ";\n";
+        }
+      );
 #endif // !CSS_DBG_PARSE
     }
   }

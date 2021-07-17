@@ -63,7 +63,7 @@ struct action<composite::property>
     const Input& in,
     stylesheet& sheet)
   {
-    sheet.accumulate.propertyName = in.string();
+    sheet.accumulate.prop.name = in.string();
   }
 };
 
@@ -75,7 +75,19 @@ struct action<composite::property_value>
     const Input& in,
     stylesheet& sheet)
   {
-    sheet.accumulate.propertyValue = in.string();
+    sheet.accumulate.prop.value = in.string();
+  }
+};
+
+template<>
+struct action<composite::important>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    sheet.accumulate.prop.important = true;
   }
 };
 
@@ -88,9 +100,11 @@ struct action<composite::declaration>
     stylesheet& sheet)
   {
     (void)in;
-    sheet.accumulate.properties.map[sheet.accumulate.propertyName] = sheet.accumulate.propertyValue;
-    sheet.accumulate.propertyName.clear();
-    sheet.accumulate.propertyValue.clear();
+    if (sheet.accumulate.prop.is_set())
+    {
+      sheet.accumulate.properties.insert(sheet.accumulate.prop);
+      sheet.accumulate.prop.clear();
+    }
   }
 };
 
@@ -102,9 +116,10 @@ struct action<composite::ruleset>
     const Input& in,
     stylesheet& sheet)
   {
-    sheet.properties[sheet.accumulate.selector].map.insert(
-      sheet.accumulate.properties.map.begin(), sheet.accumulate.properties.map.end());
-    sheet.accumulate.properties.map.clear();
+    sheet.accumulate.properties.visit(
+      [&sheet](const property& p) { sheet.properties[sheet.accumulate.selector].insert(p); }
+    );
+    sheet.accumulate.properties.clear();
   }
 };
 #endif // !CSS_DBG_PARSE
