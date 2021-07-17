@@ -1,6 +1,6 @@
 #define TAO_PEGTL_NAMESPACE css_pegtl
-// #define DBG_GRAMMAR 1
-// #define DBG_PARSE 1
+#define DBG_GRAMMAR 1
+#define DBG_PARSE 1
 
 #include "tao/pegtl.hpp"
 #ifdef DBG_GRAMMAR
@@ -1365,6 +1365,7 @@ struct action
 #endif
 };
 
+#ifndef DBG_PARSE
 template<>
 struct action<token::encoding_charset>
 {
@@ -1441,7 +1442,7 @@ struct action<composite::ruleset>
     sheet.accumulate.properties.map.clear();
   }
 };
-
+#endif // DBG_PARSE
 
 } // css namepace
 
@@ -1492,25 +1493,31 @@ int main(int argc, char* argv[])
   // Print summary and increment counters.
   if (sheet.valid)
   {
+#ifndef DBG_PARSE
     std::cout << "\n\n# Summary\n\n";
+#endif // DBG_PARSE
     for (const auto& sel : sheet.properties)
     {
       numRulesets += sel.second.map.size();
+#ifndef DBG_PARSE
       std::cout << "Selector <" << sel.first << ">\n";
       for (const auto& prop : sel.second.map)
       {
         std::cout << "    " << prop.first << ": " << prop.second << ";\n";
       }
+#endif // DBG_PARSE
     }
   }
   std::cout
     << "Parse took " << dt << "µs";
+#ifndef DBG_PARSE
   if (sheet.valid)
   {
     std::cout
       << " for " << sheet.properties.size() << " selectors"
       << " and " << numRulesets << " rulesets.";
   }
+#endif // DBG_PARSE
   std::cout << "\n";
 
   return sheet.valid ? 0 : 1;
