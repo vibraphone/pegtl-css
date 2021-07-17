@@ -11,6 +11,7 @@
 #include "TypeName.h"
 using smtk::common::typeName;
 
+#include <chrono>
 #include <memory>
 #include <fstream>
 #include <iomanip>
@@ -1376,6 +1377,7 @@ int main(int argc, char* argv[])
   std::string filedata = read_file(filename);
   auto source = tao::css_pegtl::memory_input(filedata, filename);
 
+  const auto start = std::chrono::steady_clock::now();
   css::stylesheet sheet;
   try
   {
@@ -1398,6 +1400,9 @@ int main(int argc, char* argv[])
       << std::setw( p.byte ) << '^' << "\n";
     sheet.valid = false;
   }
+  const auto end = std::chrono::steady_clock::now();
+  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  std::cout << "Parse took " << dt << "µs.\n";
 
   return sheet.valid ? 0 : 1;
 }
