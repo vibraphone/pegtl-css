@@ -1,6 +1,6 @@
 #define TAO_PEGTL_NAMESPACE css_pegtl
-#define DBG_GRAMMAR 1
-#define DBG_PARSE 1
+// #define DBG_GRAMMAR 1
+// #define DBG_PARSE 1
 
 #include "tao/pegtl.hpp"
 #ifdef DBG_GRAMMAR
@@ -759,23 +759,27 @@ struct prio :
 };
 
 /// A property keyword
-struct property :
-  rule::seq<
-    token::ident,
-    token::optional_whitespace
+struct property : token::ident
+{
+};
+
+/// A property's value as a function or expression.
+struct property_value :
+  rule::sor<
+    composite::function,
+    composite::expr
   >
 {
 };
 
+/// A property declaration (property name, value, and optional priority/importance).
 struct declaration :
   rule::seq<
     composite::property,
+    token::optional_whitespace,
     token::colon,
     token::optional_whitespace,
-    rule::sor<
-      composite::function,
-      composite::expr
-    >,
+    composite::property_value,
     rule::opt<composite::prio>
   >
 {
@@ -1311,12 +1315,27 @@ struct function_block : rule::seq<
 
 } // composite namespace
 
+struct propertyData
+{
+  std::map<std::string, std::string> map;
+};
+
+struct accumulator
+{
+  std::string selector;
+  propertyData properties;
+  std::string propertyName;
+  std::string propertyValue;
+};
+
 /// State associated with parsing a stylesheet.
 struct stylesheet
 {
   stylesheet() = default;
   bool valid = true;
   std::string encoding = "utf-8";
+  accumulator accumulate;
+  std::unordered_map<std::string, propertyData> properties;
 };
 
 /// A grammar
@@ -1357,6 +1376,72 @@ struct action<token::encoding_charset>
     sheet.encoding = in.string().substr(1, in.string().size() - 2);
   }
 };
+
+template<>
+struct action<composite::selector>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    sheet.accumulate.selector = in.string();
+  }
+};
+
+template<>
+struct action<composite::property>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    sheet.accumulate.propertyName = in.string();
+  }
+};
+
+template<>
+struct action<composite::property_value>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    sheet.accumulate.propertyValue = in.string();
+  }
+};
+
+template<>
+struct action<composite::declaration>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    (void)in;
+    sheet.accumulate.properties.map[sheet.accumulate.propertyName] = sheet.accumulate.propertyValue;
+    sheet.accumulate.propertyName.clear();
+    sheet.accumulate.propertyValue.clear();
+  }
+};
+
+template<>
+struct action<composite::ruleset>
+{
+  template<typename Input>
+  static void apply(
+    const Input& in,
+    stylesheet& sheet)
+  {
+    sheet.properties[sheet.accumulate.selector].map.insert(
+      sheet.accumulate.properties.map.begin(), sheet.accumulate.properties.map.end());
+    sheet.accumulate.properties.map.clear();
+  }
+};
+
 
 } // css namepace
 
@@ -1402,7 +1487,31 @@ int main(int argc, char* argv[])
   }
   const auto end = std::chrono::steady_clock::now();
   auto dt = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  std::cout << "Parse took " << dt << "µs.\n";
+  std::size_t numRulesets = 0;
+
+  // Print summary and increment counters.
+  if (sheet.valid)
+  {
+    std::cout << "\n\n# Summary\n\n";
+    for (const auto& sel : sheet.properties)
+    {
+      numRulesets += sel.second.map.size();
+      std::cout << "Selector <" << sel.first << ">\n";
+      for (const auto& prop : sel.second.map)
+      {
+        std::cout << "    " << prop.first << ": " << prop.second << ";\n";
+      }
+    }
+  }
+  std::cout
+    << "Parse took " << dt << "µs";
+  if (sheet.valid)
+  {
+    std::cout
+      << " for " << sheet.properties.size() << " selectors"
+      << " and " << numRulesets << " rulesets.";
+  }
+  std::cout << "\n";
 
   return sheet.valid ? 0 : 1;
 }
