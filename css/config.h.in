@@ -1,0 +1,22 @@
+#ifndef css_config_h
+#define css_config_h
+/*!\file */
+
+#define TAO_PEGTL_NAMESPACE @CSS_PEGTL_NAMESPACE@
+#cmakedefine01 CSS_DBG_GRAMMAR
+#cmakedefine01 CSS_DBG_PARSE
+
+#include "tao/pegtl.hpp"
+#if CSS_DBG_GRAMMAR
+#  include "tao/pegtl/analyze.hpp"
+#endif
+#include "tao/pegtl/contrib/icu/utf8.hpp"
+
+/// A namespace for the CSS parser
+namespace css
+{
+  /// Import pegtl into the css namespace for its rules.
+  namespace rule = tao::css_pegtl;
+}
+
+#endif // css_config_h
