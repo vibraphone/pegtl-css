@@ -25,7 +25,11 @@ endif()
 
 set(headers
   css/token/grammar.h
+
   css/composite/grammar.h
+
+  css/parser/actions.h
+  css/parser/state.h
 )
 
 configure_file(
@@ -35,7 +39,9 @@ configure_file(
 )
 list(APPEND headers ${CMAKE_CURRENT_BINARY_DIR}/css/config.h)
 
-add_library(css INTERFACE)
+add_library(css INTERFACE
+  ${headers}
+)
 target_link_libraries(css
   INTERFACE
     taocpp::pegtl
@@ -54,7 +60,13 @@ add_executable(parse-css parse-css.cxx)
 target_link_libraries(parse-css
   css
   taocpp::pegtl
-  ICU::i18n
-  ICU::data
-  ICU::uc
+)
+
+install(FILES ${headers}
+  DESTINATION include
+)
+install(TARGETS css parse-css
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  PUBLIC_HEADER DESTINATION include
 )
